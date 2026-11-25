@@ -57,17 +57,61 @@ kts = Path('android/app/build.gradle.kts')
 groovy = Path('android/app/build.gradle')
 if kts.exists():
     gradle = kts.read_text(encoding='utf-8')
+
     if 'isCoreLibraryDesugaringEnabled = true' not in gradle:
-        gradle = re.sub(r'(compileOptions\s*\{)', r'\1\n        isCoreLibraryDesugaringEnabled = true', gradle, count=1)
-    if 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:' not in gradle:
-        gradle = re.sub(r'(dependencies\s*\{)', r'\1\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")', gradle, count=1)
+        gradle = re.sub(
+            r'(compileOptions\s*\{)',
+            r'\1\n        isCoreLibraryDesugaringEnabled = true',
+            gradle,
+            count=1
+        )
+
+    if 'desugar_jdk_libs:2.1.4' not in gradle:
+        dependency = '''
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+}
+'''
+        if re.search(r'dependencies\s*\{', gradle):
+            gradle = re.sub(
+                r'(dependencies\s*\{)',
+                r'\1\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")',
+                gradle,
+                count=1
+            )
+        else:
+            gradle += '\n' + dependency
+
     kts.write_text(gradle, encoding='utf-8')
+
 elif groovy.exists():
     gradle = groovy.read_text(encoding='utf-8')
+
     if 'coreLibraryDesugaringEnabled true' not in gradle:
-        gradle = re.sub(r'(compileOptions\s*\{)', r'\1\n        coreLibraryDesugaringEnabled true', gradle, count=1)
-    if 'coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:' not in gradle:
-        gradle = re.sub(r'(dependencies\s*\{)', r'\1\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"', gradle, count=1)
+        gradle = re.sub(
+            r'(compileOptions\s*\{)',
+            r'\1\n        coreLibraryDesugaringEnabled true',
+            gradle,
+            count=1
+        )
+
+    if 'desugar_jdk_libs:2.1.4' not in gradle:
+        dependency = '''
+dependencies {
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"
+}
+'''
+        if re.search(r'dependencies\s*\{', gradle):
+            gradle = re.sub(
+                r'(dependencies\s*\{)',
+                r'\1\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"',
+                gradle,
+                count=1
+            )
+        else:
+            gradle += '\n' + dependency
+
     groovy.write_text(gradle, encoding='utf-8')
+
 else:
     raise SystemExit('Gradle app dosyası bulunamadı')
