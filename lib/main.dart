@@ -420,7 +420,7 @@ class _MainShellState extends State<MainShell> {
     final pages = [
       HomePage(teachers: teachers, periods: periods),
       PeriodSettingsPage(periods: periods, onChanged: (p) async { periods = p; await _savePeriods(); }),
-      ProgramPage(teachers: teachers, backups: backups, onImport: _importSchedule, onRestore: _restore),
+      ProgramPage(teachers: teachers, periods: periods, backups: backups, onImport: _importSchedule, onRestore: _restore),
       const PersonalAreaPage(),
     ];
     return Scaffold(
