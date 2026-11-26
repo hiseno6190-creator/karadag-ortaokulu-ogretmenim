@@ -501,7 +501,7 @@ Future<void> _shareFile(Map<String, dynamic> document) async {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(_formatDate(document['date'])),
-                onTap: () => _openFileInfo(document),
+                onTap: () => _openFile(document),
                 trailing: PopupMenuButton<String>(
                   onSelected: (value) {
                     if (value == 'open') _openFile(document);
