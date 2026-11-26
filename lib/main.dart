@@ -520,7 +520,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class PeriodSettingsPage extends StatelessWidget {
+class PeriodSettingsPage extends StatefulWidget {
   const PeriodSettingsPage({super.key, required this.periods, required this.onChanged});
   final List<LessonPeriod> periods; final ValueChanged<List<LessonPeriod>> onChanged;
   Future<void> _edit(BuildContext context, LessonPeriod p) async {
@@ -539,10 +539,137 @@ class PeriodSettingsPage extends StatelessWidget {
 }
 
 class ProgramPage extends StatelessWidget {
-  const ProgramPage({super.key, required this.teachers, required this.backups, required this.onImport, required this.onRestore});
-  final List<TeacherSchedule> teachers; final List<Map<String,dynamic>> backups; final VoidCallback onImport; final ValueChanged<int> onRestore;
+  const ProgramPage({super.key, required this.teachers, required this.periods, required this.backups, required this.onImport, required this.onRestore});
+  final List<TeacherSchedule> teachers; final List<LessonPeriod> periods; final List<Map<String,dynamic>> backups; final VoidCallback onImport; final ValueChanged<int> onRestore;
+  @override
+State<ProgramPage> createState() => _ProgramPageState();
+}
+
+class _ProgramPageState extends State<ProgramPage> {
+  bool lessonAlertsEnabled = false;
+  bool persistentNotificationEnabled = false;
+  @override
+void initState() {
+  super.initState();
+  _loadNotificationSettings();
+  Future<TeacherSchedule?> _getPinnedTeacher() async {
+  final prefs = await SharedPreferences.getInstance();
+  final pinned = prefs.getString('pinned_teacher_v1');
+
+  for (final teacher in widget.teachers) {
+    if (teacher.name == pinned) return teacher;
+  }
+
+  return widget.teachers.isNotEmpty ? widget.teachers.first : null;
+}
+
+Future<void> _toggleLessonAlerts(bool enabled) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('lesson_alerts_enabled_v1', enabled);
+
+  final teacher = await _getPinnedTeacher();
+
+  if (enabled && teacher != null) {
+    await NotificationService.instance.scheduleLessonAlerts(
+      widget.periods.map((p) => p.toJson()).toList(),
+      teacher.lessons.map((e) => e.toJson()).toList(),
+    );
+  } else {
+    await NotificationService.instance.scheduleLessonAlerts(
+      widget.periods.map((p) => p.toJson()).toList(),
+      [],
+    );
+  }
+
+  if (mounted) setState(() => lessonAlertsEnabled = enabled);
+}
+Future<bool> _requestNotificationPermission() async {
+  final granted =
+      await NotificationService.instance.requestPermission();
+
+  if (!granted && mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Bildirim izni verilmedi. Ayarlardan izin vermelisin.'),
+      ),
+    );
+  }
+
+  return granted;
+}
+Future<void> _togglePersistentNotification(bool enabled) async {
+  if (enabled) {
+  final granted = await _requestNotificationPermission();
+  if (!granted) return;
+  }
+  if (enabled) {
+  final granted = await _requestNotificationPermission();
+  if (!granted) return;
+  }
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('persistent_notification_enabled_v1', enabled);
+
+  final teacher = await _getPinnedTeacher();
+
+  if (enabled && teacher != null) {
+    await NotificationService.instance.schedulePersistentNotification(
+      widget.periods.map((p) => p.toJson()).toList(),
+      teacherName: teacher.name,
+      lessons: teacher.lessons.map((e) => e.toJson()).toList(),
+    );
+  } else {
+    await NotificationService.instance.cancelPersistentNotification();
+  }
+
+  if (mounted) setState(() => persistentNotificationEnabled = enabled);
+}
+}
+
+Future<void> _loadNotificationSettings() async {
+  final prefs = await SharedPreferences.getInstance();
+  if (!mounted) return;
+
+  setState(() {
+    lessonAlertsEnabled =
+        prefs.getBool('lesson_alerts_enabled_v1') ?? false;
+    persistentNotificationEnabled =
+        prefs.getBool('persistent_notification_enabled_v1') ?? false;
+  });
+}
+  List<TeacherSchedule> get teachers => widget.teachers;
+  List<LessonPeriod> get periods => widget.periods;
+  List<Map<String, dynamic>> get backups => widget.backups;
+  VoidCallback get onImport => widget.onImport;
+  ValueChanged<int> get onRestore => widget.onRestore;
   @override Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
     const Text('Program yönetimi', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), const SizedBox(height: 12),
+    Card(
+  child: Column(
+    children: [
+      const ListTile(
+        leading: Icon(Icons.notifications_active_outlined, color: brand),
+        title: Text('Bildirim ayarları'),
+        subtitle: Text('Bildirimleri birbirinden bağımsız yönetebilirsin.'),
+      ),
+      SwitchListTile(
+        secondary: const Icon(Icons.notifications_outlined),
+        title: const Text('Ders öncesi bildirim'),
+        subtitle: const Text('Ders başlamadan 1 dakika önce bildirim gönderir. 5 dakika sonra kaybolur.'),
+        value: lessonAlertsEnabled,
+        onChanged: _toggleLessonAlerts,
+      ),
+      const Divider(height: 1),
+      SwitchListTile(
+        secondary: const Icon(Icons.school_outlined),
+        title: const Text('Kalıcı okul günü bildirimi'),
+        subtitle: const Text('İlk dersten 30 dakika önce başlar, son dersten 10 dakika sonra biter.'),
+        value: persistentNotificationEnabled,
+        onChanged: _togglePersistentNotification,
+      ),
+    ],
+  ),
+),
+const SizedBox(height: 12),
     Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [const Icon(Icons.table_view, size: 44, color: brand), const SizedBox(height: 8), const Text('Yeni ders programı ekle', style: TextStyle(fontWeight: FontWeight.bold)), const Text('Excel (.xlsx) veya PDF dosyası seçilir. Öğretmen sayısı için sabit bir üst sınır yoktur; bulunan tüm kayıtlar önizlenir.', textAlign: TextAlign.center), const SizedBox(height: 12), FilledButton.icon(onPressed: onImport, icon: const Icon(Icons.upload_file), label: const Text('Excel / PDF dosyası seç'))]))),
     Card(child: ListTile(leading: const Icon(Icons.people_alt_outlined), title: const Text('Aktif öğretmen sayısı'), trailing: Text('${teachers.length}'))),
     const SizedBox(height: 12), const Text('Son üç program yedeği', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
