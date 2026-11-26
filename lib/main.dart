@@ -15,7 +15,7 @@ import 'notification_service.dart';
 
 void main() => runApp(const KaradagApp());
 
-const brand = Color(0xFF176B45);
+const brand = Color(0xFF1565C0);
 const weekdays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'];
 
 class LessonPeriod {
