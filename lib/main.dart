@@ -550,58 +550,118 @@ class ProgramPage extends StatelessWidget {
     const SizedBox(height: 8), const Text('Excel/PDF içe aktarma ve yedekleme cihaz üzerinde, internet bağlantısı olmadan yapılacak şekilde tasarlanmıştır.', style: TextStyle(fontSize: 12, color: Colors.black54)),
   ]);
 }
-
-class AboutPage extends StatefulWidget {
+class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
-  @override State<AboutPage> createState() => _AboutPageState();
-}
-class _AboutPageState extends State<AboutPage> {
-  static const _notificationsKey = 'notifications_enabled_v1';
-  bool notificationsEnabled = false;
-  bool loaded = false;
-  @override void initState() { super.initState(); _load(); }
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedNotificationSetting = prefs.getBool(_notificationsKey) ?? false;
-    if (savedNotificationSetting) {
-      await _scheduleNotificationsForCurrentData();
-    }
-    if (!mounted) return;
-    setState(() { notificationsEnabled = savedNotificationSetting; loaded = true; });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const SizedBox(height: 20),
+        Center(
+          child: Column(
+            children: [
+              Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE3F0FF),
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: const Icon(
+                  Icons.school_rounded,
+                  size: 64,
+                  color: Color(0xFF1565C0),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'KARADAĞ ORTAOKULU',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 23,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1565C0),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Öğretmenim',
+                style: TextStyle(
+                  fontSize: 17,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Ders Programı ve Bildirim Uygulaması',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 32),
+        Card(
+          elevation: 1,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.groups_rounded,
+                  size: 34,
+                  color: Color(0xFF1565C0),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'HAZIRLAYAN',
+                  style: TextStyle(
+                    color: Color(0xFF1565C0),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Karadağ Ortaokulu',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Bilgisayar ve Öğretim Teknolojileri '
+                  'Zümre Öğretmenleri',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(height: 1.5),
+                ),
+                const Divider(height: 30),
+                const Text(
+                  'Hasari Kaşkan\nHakan Aldağ\nHüseyin Yapıcı',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    height: 1.9,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Center(
+          child: Text(
+            'Karadağ Ortaokulu için hazırlanmıştır.',
+            style: TextStyle(
+              color: Colors.black45,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
+    );
   }
-  Future<void> _setOption(String key, bool value, bool isNotification) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (isNotification) {
-      if (value) {
-        final granted = await NotificationService.instance.requestPermission();
-        if (!granted) {
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Bildirim izni verilmedi. Telefon ayarlarından izin verebilirsiniz.')),
-          );
-          return;
-        }
-        await _scheduleNotificationsForCurrentData();
-      } else {
-        await NotificationService.instance.cancelAll();
-      }
-    }
-    await prefs.setBool(key, value);
-    if (!mounted) return;
-    setState(() { notificationsEnabled = value; });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
-      isNotification
-          ? (value ? 'Ders ve teneffüs bildirimleri etkinleştirildi.' : 'Bildirimler kapatıldı.')
-          : 'Tercihiniz kaydedildi.',
-    )));
-  }
-  @override Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(20), children: [
-    const Center(child: Column(children: [CircleAvatar(radius: 34, backgroundColor: brand, child: Icon(Icons.school, color: Colors.white, size: 36)), SizedBox(height: 12), Text('Karadağ Ortaokulu', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), SizedBox(height: 4), Text('Ders Programı Uygulaması', style: TextStyle(color: Colors.black54))])),
-    const SizedBox(height: 24),
-    Card(child: Column(children: [
-      SwitchListTile(value: notificationsEnabled, onChanged: loaded ? (v) => _setOption(_notificationsKey, v, true) : null, secondary: const Icon(Icons.notifications_active_outlined), title: const Text('Ders ve teneffüs bildirimleri'), subtitle: const Text('Ders ve teneffüs uyarıları ile ilk dersten 30 dakika önce başlayıp son dersten 10 dakika sonra kapanan kalıcı motivasyon bildirimi.'),),
-    ])),
-    const Padding(padding: EdgeInsets.only(top: 8), child: Text('Bu seçenekler kullanıcı onayıyla etkinleştirilir. Android cihaz izinleri ayrıca istenebilir.', style: TextStyle(fontSize: 12, color: Colors.black54))),
-    const SizedBox(height: 24),
-    const Text('Bu uygulama Karadağ Bilgisayar ve Öğretim Teknolojileri Zümreleri tarafından hazırlanmıştır.\n\nHasari Kaşkan, Hakan Aldağ, Hüseyin Yapıcı', textAlign: TextAlign.center, style: TextStyle(height: 1.6)),
-  ]);
 }
