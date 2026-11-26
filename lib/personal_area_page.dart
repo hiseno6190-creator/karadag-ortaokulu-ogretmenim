@@ -504,17 +504,27 @@ Future<void> _shareFile(Map<String, dynamic> document) async {
                 onTap: () => _openFileInfo(document),
                 trailing: PopupMenuButton<String>(
                   onSelected: (value) {
+                    if (value == 'open') _openFile(document);
+                    if (value == 'share') _shareFile(document);
                     if (value == 'delete') _deleteFile(index);
                     if (value == 'info') _showFileInfo(document);
                   },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: 'info',
-                      child: Text('Dosya bilgisi'),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Sil'),
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
+                        value: 'open',
+                        child: Text('Aç'),
+                      ),
+                      PopupMenuItem(
+                        value: 'share',
+                        child: Text('Paylaş'),
+                      ),
+                      PopupMenuItem(
+                        value: 'info',
+                        child: Text('Dosya bilgisi'),
+                     ),
+                     PopupMenuItem(
+                       value: 'delete',
+                       child: Text('Sil'),
                     ),
                   ],
                 ),
