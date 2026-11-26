@@ -2,10 +2,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cross_file/cross_file.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:share_plus/share_plus.dart';
 
 class PersonalAreaPage extends StatefulWidget {
   const PersonalAreaPage({super.key});
@@ -250,6 +253,46 @@ class _PersonalAreaPageState extends State<PersonalAreaPage> {
     _showMessage('Dosya silindi.');
   }
 
+  Future<void> _openFile(Map<String, dynamic> document) async {
+  final path = document['path'] as String?;
+
+  if (path == null || !await File(path).exists()) {
+    _showMessage('Dosya bulunamadı. Lütfen yeniden ekleyin.');
+    return;
+  }
+
+  try {
+    final result = await OpenFilex.open(path);
+
+    if (result.type != ResultType.done) {
+      _showMessage(
+        'Dosya açılamadı. Uygun bir görüntüleyici yüklü olmayabilir.',
+      );
+    }
+  } catch (e) {
+    _showMessage('Dosya açılırken bir hata oluştu.');
+  }
+}
+
+Future<void> _shareFile(Map<String, dynamic> document) async {
+  final path = document['path'] as String?;
+
+  if (path == null || !await File(path).exists()) {
+    _showMessage('Paylaşılacak dosya bulunamadı.');
+    return;
+  }
+
+  try {
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(path)],
+        subject: document['name']?.toString(),
+      ),
+    );
+  } catch (e) {
+    _showMessage('Dosya paylaşılırken bir hata oluştu.');
+  }
+}
   void _showFileInfo(Map<String, dynamic> document) {
     final size = document['size'] as int? ?? 0;
     final sizeText = size < 1024
@@ -458,7 +501,7 @@ class _PersonalAreaPageState extends State<PersonalAreaPage> {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(_formatDate(document['date'])),
-                onTap: () => _showFileInfo(document),
+                onTap: () => _openFileInfo(document),
                 trailing: PopupMenuButton<String>(
                   onSelected: (value) {
                     if (value == 'delete') _deleteFile(index);
