@@ -538,7 +538,7 @@ class PeriodSettingsPage extends StatefulWidget {
   ]);
 }
 
-class ProgramPage extends StatelessWidget {
+class ProgramPage extends StatefulWidget {
   const ProgramPage({super.key, required this.teachers, required this.periods, required this.backups, required this.onImport, required this.onRestore});
   final List<TeacherSchedule> teachers; final List<LessonPeriod> periods; final List<Map<String,dynamic>> backups; final VoidCallback onImport; final ValueChanged<int> onRestore;
   @override
@@ -552,6 +552,7 @@ class _ProgramPageState extends State<ProgramPage> {
 void initState() {
   super.initState();
   _loadNotificationSettings();
+}
   Future<TeacherSchedule?> _getPinnedTeacher() async {
   final prefs = await SharedPreferences.getInstance();
   final pinned = prefs.getString('pinned_teacher_v1');
@@ -564,6 +565,11 @@ void initState() {
 }
 
 Future<void> _toggleLessonAlerts(bool enabled) async {
+  if (enabled) {
+    final granted = await _requestNotificationPermission();
+    if (!granted) return;
+  }
+
   final prefs = await SharedPreferences.getInstance();
   await prefs.setBool('lesson_alerts_enabled_v1', enabled);
 
@@ -602,10 +608,6 @@ Future<void> _togglePersistentNotification(bool enabled) async {
   final granted = await _requestNotificationPermission();
   if (!granted) return;
   }
-  if (enabled) {
-  final granted = await _requestNotificationPermission();
-  if (!granted) return;
-  }
   final prefs = await SharedPreferences.getInstance();
   await prefs.setBool('persistent_notification_enabled_v1', enabled);
 
@@ -623,7 +625,7 @@ Future<void> _togglePersistentNotification(bool enabled) async {
 
   if (mounted) setState(() => persistentNotificationEnabled = enabled);
 }
-}
+
 
 Future<void> _loadNotificationSettings() async {
   final prefs = await SharedPreferences.getInstance();
