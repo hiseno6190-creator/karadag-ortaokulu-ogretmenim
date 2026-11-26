@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 import 'notification_service.dart';
+import 'personal_area_page.dart';
 
 void main() => runApp(const KaradagApp());
 
@@ -420,7 +421,7 @@ class _MainShellState extends State<MainShell> {
       HomePage(teachers: teachers, periods: periods),
       PeriodSettingsPage(periods: periods, onChanged: (p) async { periods = p; await _savePeriods(); }),
       ProgramPage(teachers: teachers, backups: backups, onImport: _importSchedule, onRestore: _restore),
-      const AboutPage(),
+      const PersonalAreaPage(),
     ];
     return Scaffold(
       appBar: AppBar(title: const Text('Karadağ Ortaokulu', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: brand, foregroundColor: Colors.white),
@@ -429,7 +430,7 @@ class _MainShellState extends State<MainShell> {
         NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Ana Sayfa'),
         NavigationDestination(icon: Icon(Icons.schedule_outlined), selectedIcon: Icon(Icons.schedule), label: 'Ders Saatleri'),
         NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'Program'),
-        NavigationDestination(icon: Icon(Icons.info_outline), selectedIcon: Icon(Icons.info), label: 'Hakkında'),
+        NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Kişisel Alan'),
       ]),
     );
   }
