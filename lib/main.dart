@@ -1363,5 +1363,57 @@ class _ProgramPageState extends State<ProgramPage> {
           child: ListTile(
             leading: const Icon(Icons.people_alt_outlined),
             title: const Text('Aktif öğretmen sayısı'),
-            trailing: Text('${ww
+            trailing: Text('${widget.teachers.length}'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Program yedekleri',
+          style: TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (widget.backups.isEmpty)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Henüz kayıtlı program yedeği bulunmuyor.'),
+            ),
+          )
+        else
+          ...widget.backups.asMap().entries.map((entry) {
+            final index = entry.key;
+            final backup = entry.value;
+            final created = DateTime.tryParse(
+              backup['created']?.toString() ?? '',
+            );
+            final teacherCount =
+                (backup['teachers'] as List?)?.length ?? 0;
+
+            return Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.backup_outlined,
+                  color: brand,
+                ),
+                title: Text(
+                  created == null
+                      ? 'Program yedeği ${index + 1}'
+                      : DateFormat('dd.MM.yyyy HH:mm').format(created),
+                ),
+                subtitle: Text('$teacherCount öğretmen kaydı'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.restore),
+                  tooltip: 'Yedeği geri yükle',
+                  onPressed: () => _confirmRestore(index),
+                ),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+}
  
