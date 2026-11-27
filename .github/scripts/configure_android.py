@@ -11,6 +11,7 @@ permissions = [
     'android.permission.RECEIVE_BOOT_COMPLETED',
     'android.permission.FOREGROUND_SERVICE',
     'android.permission.FOREGROUND_SERVICE_SPECIAL_USE',
+    'android.permission.SCHEDULE_EXACT_ALARM',
 ]
 for name in permissions:
     if name not in xml:
