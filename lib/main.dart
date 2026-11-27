@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -18,7 +17,12 @@ const brand = Color(0xFF1565C0);
 const weekdays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'];
 
 class LessonPeriod {
-  LessonPeriod({required this.number, required this.start, required this.end});
+  LessonPeriod({
+    required this.number,
+    required this.start,
+    required this.end,
+  });
+
   int number;
   String start;
   String end;
@@ -89,7 +93,8 @@ class TeacherSchedule {
       TeacherSchedule(
         name: j['name'],
         lessons: (j['lessons'] as List)
-            .map((e) => LessonEntry.fromJson(Map<String, dynamic>.from(e)))
+            .map((e) => LessonEntry.fromJson(
+                Map<String, dynamic>.from(e)))
             .toList(),
         warning: j['warning'] ?? '',
       );
@@ -117,14 +122,16 @@ class ScheduleStore {
 
     try {
       return (jsonDecode(raw) as List)
-          .map((e) => LessonPeriod.fromJson(Map<String, dynamic>.from(e)))
+          .map((e) => LessonPeriod.fromJson(
+              Map<String, dynamic>.from(e)))
           .toList();
     } catch (_) {
       return defaults();
     }
   }
 
-  static Future<void> savePeriods(List<LessonPeriod> periods) async {
+  static Future<void> savePeriods(
+      List<LessonPeriod> periods) async {
     final p = await SharedPreferences.getInstance();
     await p.setString(
       periodsKey,
@@ -139,14 +146,16 @@ class ScheduleStore {
 
     try {
       return (jsonDecode(raw) as List)
-          .map((e) => TeacherSchedule.fromJson(Map<String, dynamic>.from(e)))
+          .map((e) => TeacherSchedule.fromJson(
+              Map<String, dynamic>.from(e)))
           .toList();
     } catch (_) {
       return [];
     }
   }
 
-  static Future<void> saveTeachers(List<TeacherSchedule> teachers) async {
+  static Future<void> saveTeachers(
+      List<TeacherSchedule> teachers) async {
     final p = await SharedPreferences.getInstance();
     await p.setString(
       teachersKey,
@@ -172,26 +181,27 @@ class ScheduleStore {
     final teachers = await loadTeachers();
     if (teachers.isEmpty) return;
 
-    final backupList = await backups();
-    backupList.insert(0, {
+    final list = await backups();
+    list.insert(0, {
       'created': DateTime.now().toIso8601String(),
       'teachers': teachers.map((e) => e.toJson()).toList(),
     });
 
-    if (backupList.length > 3) {
-      backupList.removeRange(3, backupList.length);
+    if (list.length > 3) {
+      list.removeRange(3, list.length);
     }
 
     final p = await SharedPreferences.getInstance();
-    await p.setString(backupsKey, jsonEncode(backupList));
+    await p.setString(backupsKey, jsonEncode(list));
   }
 
   static Future<void> restore(int index) async {
-    final backupList = await backups();
-    if (index < 0 || index >= backupList.length) return;
+    final list = await backups();
+    if (index < 0 || index >= list.length) return;
 
-    final teachers = (backupList[index]['teachers'] as List)
-        .map((e) => TeacherSchedule.fromJson(Map<String, dynamic>.from(e)))
+    final teachers = (list[index]['teachers'] as List)
+        .map((e) => TeacherSchedule.fromJson(
+            Map<String, dynamic>.from(e)))
         .toList();
 
     await saveTeachers(teachers);
@@ -213,19 +223,17 @@ Future<void> _scheduleNotificationsForCurrentData() async {
   await NotificationService.instance.scheduleWeekdayNotifications(
     periods.map((p) => p.toJson()).toList(),
     teacherName: teacher?.name ?? '',
-    lessons: teacher?.lessons.map((e) => e.toJson()).toList() ?? const [],
+    lessons: teacher?.lessons.map((e) => e.toJson()).toList() ?? [],
   );
 }
 
-class ScheduleImportResult {
-  ScheduleImportResult(this.teachers, this.warnings);
+class ExcelImportResult {
+  ExcelImportResult(this.teachers, this.warnings);
 
   final List<TeacherSchedule> teachers;
   final List<String> warnings;
 }
 
-/// Excel dosyasındaki öğretmen bloklarını T.C. başlığına göre bulur.
-/// Sabit öğretmen sayısı sınırı yoktur.
 class TimetableExcelParser {
   static const _days = <String, String>{
     'Pazartesi': 'Pazartesi',
@@ -238,7 +246,8 @@ class TimetableExcelParser {
     'Cuma': 'Cuma',
   };
 
-  static String _cellText(List<List<Data?>> rows, int row, int col) {
+  static String _cellText(
+      List<List<Data?>> rows, int row, int col) {
     if (row < 0 ||
         row >= rows.length ||
         col < 0 ||
@@ -263,13 +272,13 @@ class TimetableExcelParser {
       .replaceAll('I', 'ı')
       .toLowerCase();
 
-  static Future<ScheduleImportResult> parse(Uint8List bytes) async {
+  static Future<ExcelImportResult> parse(
+      Uint8List bytes) async {
     final book = Excel.decodeBytes(bytes);
 
     if (book.tables.isEmpty) {
       throw Exception(
-        'Excel dosyasında okunabilir çalışma sayfası bulunamadı.',
-      );
+          'Excel dosyasında okunabilir çalışma sayfası bulunamadı.');
     }
 
     final teachers = <TeacherSchedule>[];
@@ -288,14 +297,14 @@ class TimetableExcelParser {
 
       for (var i = 0; i < starts.length; i++) {
         final start = starts[i];
-        final end = i + 1 < starts.length ? starts[i + 1] : rows.length;
+        final end =
+            i + 1 < starts.length ? starts[i + 1] : rows.length;
 
         final name = _cellText(rows, start + 5, 2);
 
         if (name.isEmpty) {
           warnings.add(
-            '${start + 1}. satırdaki öğretmen bloğunda ad bulunamadı.',
-          );
+              '${start + 1}. satırdaki öğretmen bloğunda ad bulunamadı.');
           continue;
         }
 
@@ -309,8 +318,7 @@ class TimetableExcelParser {
 
         if (displayName != name) {
           warnings.add(
-            'Aynı isimli öğretmen kaydı ayrı tutuldu: $displayName',
-          );
+              'Aynı isimli öğretmen kaydı ayrı tutuldu: $displayName');
         }
 
         final subjectByCode = <String, String>{};
@@ -329,7 +337,9 @@ class TimetableExcelParser {
         final lessons = <LessonEntry>[];
         final teacherWarnings = <String>[];
 
-        for (var r = start + 9; r <= start + 13 && r < end; r++) {
+        for (var r = start + 9;
+            r <= start + 13 && r < end;
+            r++) {
           final rawDay = _cellText(rows, r, 0);
           final day = _days[rawDay];
 
@@ -347,61 +357,53 @@ class TimetableExcelParser {
 
             if (parts.length < 2) {
               teacherWarnings.add(
-                '$day ${c}. ders hücresi çözümlenemedi.',
-              );
+                  '$day ${c}. ders hücresi çözümlenemedi.');
               continue;
             }
 
             final className = parts[0];
             final code = parts[1];
 
-            lessons.add(
-              LessonEntry(
-                day: day,
-                period: c,
-                className: className,
-                code: code,
-                subject: subjectByCode[code] ?? '',
-              ),
-            );
+            lessons.add(LessonEntry(
+              day: day,
+              period: c,
+              className: className,
+              code: code,
+              subject: subjectByCode[code] ?? '',
+            ));
           }
         }
 
-        final declaredTotal = int.tryParse(
-          _cellText(rows, start + 14, 2),
-        );
+        final declaredTotal =
+            int.tryParse(_cellText(rows, start + 14, 2));
 
         if (lessons.isEmpty) {
           teacherWarnings.add('Haftalık ders çizelgesi bulunamadı.');
         }
 
-        if (declaredTotal != null && declaredTotal != lessons.length) {
+        if (declaredTotal != null &&
+            declaredTotal != lessons.length) {
           teacherWarnings.add(
-            'Excel toplamı $declaredTotal saat; çizelgede ${lessons.length} dolu hücre var.',
-          );
+              'Excel toplamı $declaredTotal saat; çizelgede ${lessons.length} dolu hücre var.');
         }
 
-        teachers.add(
-          TeacherSchedule(
-            name: displayName,
-            lessons: lessons,
-            warning: teacherWarnings.join(' '),
-          ),
-        );
+        teachers.add(TeacherSchedule(
+          name: displayName,
+          lessons: lessons,
+          warning: teacherWarnings.join(' '),
+        ));
 
         warnings.addAll(
-          teacherWarnings.map((w) => '$displayName: $w'),
-        );
+            teacherWarnings.map((w) => '$displayName: $w'));
       }
     }
 
     if (teachers.isEmpty) {
       throw Exception(
-        'Excel içinde T.C. başlığıyla başlayan öğretmen blokları bulunamadı.',
-      );
+          'Excel içinde T.C. başlığıyla başlayan öğretmen blokları bulunamadı.');
     }
 
-    return ScheduleImportResult(teachers, warnings);
+    return ExcelImportResult(teachers, warnings);
   }
 }
 
@@ -453,13 +455,7 @@ class _MainShellState extends State<MainShell> {
 
   Future<void> _savePeriods() async {
     await ScheduleStore.savePeriods(periods);
-
-    final prefs = await SharedPreferences.getInstance();
-
-    if ((prefs.getBool('lesson_alerts_enabled_v1') ?? false) ||
-        (prefs.getBool('persistent_notification_enabled_v1') ?? false)) {
-      await _scheduleNotificationsForCurrentData();
-    }
+    await _scheduleNotificationsForCurrentData();
 
     if (mounted) setState(() {});
   }
@@ -471,13 +467,15 @@ class _MainShellState extends State<MainShell> {
       withData: true,
     );
 
-    if (result == null || result.files.single.bytes == null) return;
+    if (result == null || result.files.single.bytes == null) {
+      return;
+    }
 
-    final file = result.files.single;
     setState(() => loading = true);
 
     try {
-      final parsed = await TimetableExcelParser.parse(file.bytes!);
+      final parsed = await TimetableExcelParser.parse(
+          result.files.single.bytes!);
 
       if (!mounted) return;
 
@@ -496,18 +494,15 @@ class _MainShellState extends State<MainShell> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${parsed.teachers.length} öğretmen kaydı bulundu.',
-                  ),
+                      '${parsed.teachers.length} öğretmen kaydı bulundu.'),
                   const SizedBox(height: 8),
                   ...parsed.teachers.take(12).map(
                     (t) => Text(
-                      '• ${t.name} — ${t.lessons.length} ders kaydı',
-                    ),
+                        '• ${t.name} — ${t.lessons.length} ders kaydı'),
                   ),
                   if (parsed.teachers.length > 12)
                     Text(
-                      '… ve ${parsed.teachers.length - 12} öğretmen daha',
-                    ),
+                        '… ve ${parsed.teachers.length - 12} öğretmen daha'),
                   const SizedBox(height: 8),
                   Text(
                     '${parsed.warnings.length} uyarı bulundu.',
@@ -555,19 +550,13 @@ class _MainShellState extends State<MainShell> {
         teachers = parsed.teachers;
         backups = await ScheduleStore.backups();
 
-        final prefs = await SharedPreferences.getInstance();
-
-        if ((prefs.getBool('lesson_alerts_enabled_v1') ?? false) ||
-            (prefs.getBool('persistent_notification_enabled_v1') ?? false)) {
-          await _scheduleNotificationsForCurrentData();
-        }
+        await _scheduleNotificationsForCurrentData();
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '${teachers.length} öğretmen programı yüklendi.',
-              ),
+                  '${teachers.length} öğretmen programı yüklendi.'),
             ),
           );
         }
@@ -575,28 +564,18 @@ class _MainShellState extends State<MainShell> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Program dosyası okunamadı: $e'),
-          ),
+          SnackBar(content: Text('Excel dosyası okunamadı: $e')),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => loading = false);
-      }
+      if (mounted) setState(() => loading = false);
     }
   }
 
   Future<void> _restore(int i) async {
     await ScheduleStore.restore(i);
     teachers = await ScheduleStore.loadTeachers();
-
-    final prefs = await SharedPreferences.getInstance();
-
-    if ((prefs.getBool('lesson_alerts_enabled_v1') ?? false) ||
-        (prefs.getBool('persistent_notification_enabled_v1') ?? false)) {
-      await _scheduleNotificationsForCurrentData();
-    }
+    await _scheduleNotificationsForCurrentData();
 
     if (mounted) setState(() {});
   }
@@ -682,23 +661,24 @@ class _HomePageState extends State<HomePage> {
   Timer? timer;
   DateTime now = DateTime.now();
   String? selectedTeacher;
-
   final TextEditingController teacherSearch = TextEditingController();
 
   String day = weekdays[
-    DateTime.now().weekday - 1 < 5
-        ? DateTime.now().weekday - 1
-        : 0
-  ];
+      DateTime.now().weekday - 1 < 5
+          ? DateTime.now().weekday - 1
+          : 0];
 
   @override
   void initState() {
     super.initState();
     _loadPinnedTeacher();
-
     timer = Timer.periodic(
       const Duration(seconds: 1),
-      (_) => setState(() => now = DateTime.now()),
+      (_) {
+        if (mounted) {
+          setState(() => now = DateTime.now());
+        }
+      },
     );
   }
 
@@ -720,11 +700,50 @@ class _HomePageState extends State<HomePage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('pinned_teacher_v1', name);
 
-    if ((prefs.getBool('lesson_alerts_enabled_v1') ?? false) ||
-        (prefs.getBool('persistent_notification_enabled_v1') ?? false)) {
-      await _scheduleNotificationsForCurrentData();
-    }
+    await _scheduleNotificationsForCurrentData();
 
     if (!mounted) return;
 
-    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            '$name sabitlenen öğretmen olarak kaydedildi.'),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    teacherSearch.dispose();
+    super.dispose();
+  }
+
+  TeacherSchedule? get teacher {
+    if (widget.teachers.isEmpty) return null;
+
+    final found = widget.teachers
+        .where((t) => t.name == selectedTeacher)
+        .toList();
+
+    return found.isNotEmpty ? found.first : widget.teachers.first;
+  }
+
+  int _mins(String value) {
+    final p = value.split(':');
+    return int.parse(p[0]) * 60 + int.parse(p[1]);
+  }
+
+  String _duration(int seconds) {
+    if (seconds < 0) seconds = 0;
+    final d = Duration(seconds: seconds);
+
+    return '${d.inHours.toString().padLeft(2, '0')}:'
+        '${(d.inMinutes % 60).toString().padLeft(2, '0')}:'
+        '${(d.inSeconds % 60).toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dayLessons =
+ 
