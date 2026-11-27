@@ -746,4 +746,622 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final dayLessons =
+        teacher?.lessons
+                .where((e) => e.day == day)
+                .toList() ??
+            <LessonEntry>[];
+
+    dayLessons.sort((a, b) => a.period.compareTo(b.period));
+
+    final currentMinutes = now.hour * 60 + now.minute;
+    LessonPeriod? currentPeriod;
+    LessonEntry? currentLesson;
+    LessonPeriod? nextPeriod;
+    LessonEntry? nextLesson;
+    var status = 'Bugün için ders kaydı bulunmuyor.';
+    var remainingSeconds = 0;
+
+    for (final lesson in dayLessons) {
+      final matches = widget.periods
+          .where((p) => p.number == lesson.period)
+          .toList();
+      if (matches.isEmpty) continue;
+
+      final period = matches.first;
+      final start = _mins(period.start);
+      final end = _mins(period.end);
+
+      if (currentMinutes >= start && currentMinutes < end) {
+        currentPeriod = period;
+        currentLesson = lesson;
+        remainingSeconds =
+            (end * 60) - (now.hour * 3600 + now.minute * 60 + now.second);
+        status = 'Ders devam ediyor';
+        break;
+      }
+
+      if (currentMinutes < start) {
+        nextPeriod = period;
+        nextLesson = lesson;
+        remainingSeconds =
+            (start * 60) - (now.hour * 3600 + now.minute * 60 + now.second);
+        status = 'Sonraki ders';
+        break;
+      }
+    }
+
+    if (currentPeriod == null &&
+        nextPeriod == null &&
+        dayLessons.isNotEmpty) {
+      status = 'Bugünkü dersleriniz tamamlandı.';
+    }
+
+    final selected = teacher;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Öğretmen seçimi',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (widget.teachers.isEmpty)
+                  const Text(
+                    'Henüz program yüklenmedi. Program sekmesinden Excel dosyanızı aktarabilirsiniz.',
+                  )
+                else ...[
+                  DropdownButtonFormField<String>(
+                    value: widget.teachers.any(
+                            (t) => t.name == selectedTeacher)
+                        ? selectedTeacher
+                        : widget.teachers.first.name,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Öğretmen',
+                    ),
+                    items: widget.teachers
+                        .map(
+                          (t) => DropdownMenuItem(
+                            value: t.name,
+                            child: Text(
+                              t.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() => selectedTeacher = value);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _pinTeacher,
+                      icon: const Icon(Icons.push_pin_outlined),
+                      label: const Text('Öğretmenimi sabitle'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          color: const Color(0xFFE8F2FF),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              children: [
+                Text(
+                  DateFormat('d MMMM yyyy', 'tr_TR').format(now),
+                  style: const TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  weekdays[now.weekday >= 1 && now.weekday <= 5
+                      ? now.weekday - 1
+                      : 0],
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: brand,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  DateFormat('HH:mm:ss').format(now),
+                  style: const TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    color: brand,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  status,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (currentLesson != null && currentPeriod != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    '${currentLesson.subject.isNotEmpty ? currentLesson.subject : currentLesson.code}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  Text(
+                    '${currentLesson.className} · ${currentLesson.period}. ders',
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Dersin bitmesine kalan süre'),
+                  Text(
+                    _duration(remainingSeconds),
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ] else if (nextLesson != null && nextPeriod != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    '${nextLesson.subject.isNotEmpty ? nextLesson.subject : nextLesson.code}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: brand,
+                    ),
+                  ),
+                  Text(
+                    '${nextLesson.className} · ${nextLesson.period}. ders · ${nextPeriod.start}',
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Derse başlamasına kalan süre'),
+                  Text(
+                    _duration(remainingSeconds),
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: brand,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Haftalık ders programı',
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            DropdownButton<String>(
+              value: day,
+              items: weekdays
+                  .map((d) => DropdownMenuItem(
+                        value: d,
+                        child: Text(d),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) setState(() => day = value);
+              },
+            ),
+          ],
+        ),
+        if (selected == null || dayLessons.isEmpty)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Seçilen gün için ders kaydı bulunmuyor.'),
+            ),
+          )
+        else
+          ...dayLessons.map((lesson) {
+            final found = widget.periods
+                .where((p) => p.number == lesson.period)
+                .toList();
+            final period = found.isEmpty ? null : found.first;
+
+            return Card(
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: const Color(0xFFE3F0FF),
+                  child: Text(
+                    '${lesson.period}',
+                    style: const TextStyle(
+                      color: brand,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                title: Text(
+                  lesson.subject.isNotEmpty
+                      ? lesson.subject
+                      : lesson.code,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  '${lesson.className} · ${period?.start ?? '--:--'} - ${period?.end ?? '--:--'}',
+                ),
+                trailing: const Icon(Icons.school_outlined),
+              ),
+            );
+          }),
+        if (selected?.warning.isNotEmpty == true) ...[
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(
+                selected!.warning,
+                style: const TextStyle(color: Colors.deepOrange),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class PeriodSettingsPage extends StatelessWidget {
+  const PeriodSettingsPage({
+    super.key,
+    required this.periods,
+    required this.onChanged,
+  });
+
+  final List<LessonPeriod> periods;
+  final Future<void> Function(List<LessonPeriod>) onChanged;
+
+  Future<void> _editTime(
+    BuildContext context,
+    LessonPeriod period,
+    bool isStart,
+  ) async {
+    final current = (isStart ? period.start : period.end).split(':');
+    final initial = TimeOfDay(
+      hour: int.tryParse(current[0]) ?? 8,
+      minute: int.tryParse(current[1]) ?? 30,
+    );
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+
+    if (picked == null) return;
+
+    final updated = periods
+        .map(
+          (p) => LessonPeriod(
+            number: p.number,
+            start: p.number == period.number && isStart
+                ? '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}'
+                : p.start,
+            end: p.number == period.number && !isStart
+                ? '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}'
+                : p.end,
+          ),
+        )
+        .toList();
+
+    await onChanged(updated);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = [...periods]
+      ..sort((a, b) => a.number.compareTo(b.number));
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'Ders saatleri',
+          style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Saatleri değiştirmek için başlangıç veya bitiş saatine dokunun. Değişiklikler cihazınıza kaydedilir.',
+          style: TextStyle(color: Colors.black54),
+        ),
+        const SizedBox(height: 12),
+        ...sorted.map(
+          (period) => Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 8,
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: const Color(0xFFE3F0FF),
+                    child: Text(
+                      '${period.number}',
+                      style: const TextStyle(
+                        color: brand,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '${period.number}. Ders',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _editTime(
+                      context,
+                      period,
+                      true,
+                    ),
+                    child: Text(period.start),
+                  ),
+                  const Text('-'),
+                  TextButton(
+                    onPressed: () => _editTime(
+                      context,
+                      period,
+                      false,
+                    ),
+                    child: Text(period.end),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Not: Bu ekrandaki saatler tüm hafta için ortaktır. Günlere göre ayrı saat tanımlama özelliği henüz eklenmedi.',
+          style: TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+      ],
+    );
+  }
+}
+
+class ProgramPage extends StatefulWidget {
+  const ProgramPage({
+    super.key,
+    required this.teachers,
+    required this.periods,
+    required this.backups,
+    required this.onImport,
+    required this.onRestore,
+  });
+
+  final List<TeacherSchedule> teachers;
+  final List<LessonPeriod> periods;
+  final List<Map<String, dynamic>> backups;
+  final Future<void> Function() onImport;
+  final Future<void> Function(int) onRestore;
+
+  @override
+  State<ProgramPage> createState() => _ProgramPageState();
+}
+
+class _ProgramPageState extends State<ProgramPage> {
+  bool lessonAlertsEnabled = false;
+  bool persistentNotificationEnabled = false;
+  bool settingsLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (!mounted) return;
+
+    setState(() {
+      lessonAlertsEnabled =
+          prefs.getBool('lesson_alerts_enabled_v1') ?? false;
+      persistentNotificationEnabled =
+          prefs.getBool('persistent_notification_enabled_v1') ?? false;
+      settingsLoaded = true;
+    });
+  }
+
+  Future<void> _toggleLessonAlerts(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('lesson_alerts_enabled_v1', value);
+
+    if (!mounted) return;
+    setState(() => lessonAlertsEnabled = value);
+
+    await _refreshNotifications();
+  }
+
+  Future<void> _togglePersistentNotification(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('persistent_notification_enabled_v1', value);
+
+    if (!mounted) return;
+    setState(() => persistentNotificationEnabled = value);
+
+    if (value) {
+      await NotificationService.instance.requestPermission();
+    }
+
+    await _refreshNotifications();
+  }
+
+  Future<void> _refreshNotifications() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pinned = prefs.getString('pinned_teacher_v1');
+
+    final matches = widget.teachers
+        .where((t) => t.name == pinned)
+        .toList();
+
+    final teacher = matches.isNotEmpty
+        ? matches.first
+        : (widget.teachers.isNotEmpty
+            ? widget.teachers.first
+            : null);
+
+    await NotificationService.instance.scheduleWeekdayNotifications(
+      widget.periods.map((p) => p.toJson()).toList(),
+      teacherName: teacher?.name ?? '',
+      lessons: teacher?.lessons.map((e) => e.toJson()).toList() ?? [],
+    );
+  }
+
+  Future<void> _confirmRestore(int index) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Yedek geri yüklensin mi?'),
+        content: const Text(
+          'Mevcut programın üzerine yazılacak.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Geri yükle'),
+          ),
+        ],
+      ),
+    );
+
+    if (yes == true) {
+      await widget.onRestore(index);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'Bildirim ayarları',
+          style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'İki bildirim türünü birbirinden bağımsız açıp kapatabilirsiniz.',
+          style: TextStyle(color: Colors.black54),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Column(
+            children: [
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.notifications_active_outlined,
+                  color: brand,
+                ),
+                title: const Text('1 dakika bildirimi'),
+                subtitle: const Text(
+                  'Ders başlamadan ve bitmeden bir dakika önce uyarı verir. Bildirim 5 dakika sonra kaybolur.',
+                ),
+                value: lessonAlertsEnabled,
+                onChanged: settingsLoaded
+                    ? _toggleLessonAlerts
+                    : null,
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.school_outlined,
+                  color: brand,
+                ),
+                title: const Text('30 dakika kalıcı bildirim'),
+                subtitle: const Text(
+                  'Sabitlenen öğretmenin ilk dersinden 30 dakika önce başlar, son dersinden 10 dakika sonra sona erer.',
+                ),
+                value: persistentNotificationEnabled,
+                onChanged: settingsLoaded
+                    ? _togglePersistentNotification
+                    : null,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.table_view,
+                  size: 42,
+                  color: brand,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Yeni ders programı ekle',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Excel (.xlsx) dosyanızı seçerek programı aktarabilirsiniz. Öğretmen sayısı için sabit bir üst sınır yoktur.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: widget.onImport,
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text('Excel dosyası seç'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.people_alt_outlined),
+            title: const Text('Aktif öğretmen sayısı'),
+            trailing: Text('${ww
  
