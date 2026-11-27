@@ -6,13 +6,17 @@ import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'notification_service.dart';
 import 'personal_area_page.dart';
 
-void main() => runApp(const KaradagApp());
-
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('tr_TR');
+  runApp(const KaradagApp());
+}
 const brand = Color(0xFF1565C0);
 const weekdays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'];
 
