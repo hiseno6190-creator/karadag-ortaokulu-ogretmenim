@@ -1,5 +1,6 @@
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -20,6 +21,8 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
+
+  bool _exactAlarmAllowed = false;
 
   static const List<int> _weekdays = [
     DateTime.monday,
@@ -60,7 +63,29 @@ class NotificationService {
 
     final granted = await android?.requestNotificationsPermission();
 
+    // Android'in kesin alarm iznini de iste.
+    // Kullanıcı izin vermezse zamanlama inexact olarak devam eder.
+    try {
+      await android?.requestExactAlarmsPermission();
+      _exactAlarmAllowed =
+          await android?.canScheduleExactNotifications() ?? false;
+    } catch (_) {
+      _exactAlarmAllowed = false;
+    }
+
     return granted ?? true;
+  }
+
+  Future<void> _checkExactAlarmPermission() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+
+    try {
+      _exactAlarmAllowed =
+          await android?.canScheduleExactNotifications() ?? false;
+    } catch (_) {
+      _exactAlarmAllowed = false;
+    }
   }
 
   /// Yalnızca günlük kalıcı okul bildirimi kapatılır.
@@ -129,7 +154,6 @@ class NotificationService {
       return;
     }
 
-    // Eski Android koduyla geçici uyumluluk için genel saatler de gönderilir.
     await _persistentChannel.invokeMethod<void>('schedule', {
       'firstStart': sorted.first['start'],
       'lastEnd': sorted.last['end'],
@@ -146,6 +170,7 @@ class NotificationService {
     List<Map<String, dynamic>> lessons,
   ) async {
     await initialize();
+    await _checkExactAlarmPermission();
 
     final sorted = [...periods]
       ..sort(
@@ -153,8 +178,7 @@ class NotificationService {
             (a['number'] as num).compareTo(b['number'] as num),
       );
 
-    // Önce eski ders uyarılarını temizle.
-    // Böylece sonradan silinen derslerin eski bildirimleri kalmaz.
+    // Eski ders uyarılarını temizle.
     for (final day in _weekdays) {
       for (var number = 1; number <= 50; number++) {
         final id = 100000 + day * 1000 + number * 2;
@@ -195,7 +219,7 @@ class NotificationService {
         body: '$number. ders bir dakika içinde başlayacak.',
       );
 
-      // Ders bitmeden bir dakika önce.
+      // Ders bitmeden bir dakika önce: teneffüs uyarısı.
       await _scheduleWeekly(
         id: id + 1,
         weekday: day,
@@ -270,6 +294,7 @@ class NotificationService {
       minute,
     ).subtract(const Duration(minutes: 1));
 
+    // Bugünün bildirimi geçmişse bir sonraki haftaya kur.
     while (at.weekday != weekday || !at.isAfter(now)) {
       at = at.add(const Duration(days: 1));
     }
@@ -279,18 +304,29 @@ class NotificationService {
       title,
       body,
       at,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
-          'karadag_ders_bildirimleri',
+          'karadag_ders_bildirimleri_v2',
           'Ders ve teneffüs bildirimleri',
-          channelDescription: 'Ders ve teneffüs başlangıç uyarıları',
+          channelDescription:
+              'Ders başlangıcı ve teneffüs öncesi titreşimli uyarılar',
           importance: Importance.max,
           priority: Priority.high,
           visibility: NotificationVisibility.public,
           timeoutAfter: 300000,
+          playSound: true,
+          enableVibration: true,
+          vibrationPattern: Int64List.fromList([
+            0,
+            500,
+            250,
+            500,
+          ]),
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: _exactAlarmAllowed
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
     );
   }
