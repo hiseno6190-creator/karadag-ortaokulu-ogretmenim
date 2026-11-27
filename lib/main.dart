@@ -447,15 +447,24 @@ class _MainShellState extends State<MainShell> {
     _load();
   }
 
-  Future<void> _load() async {
-    periods = await ScheduleStore.loadPeriods();
-    teachers = await ScheduleStore.loadTeachers();
-    backups = await ScheduleStore.backups();
+  
+Future<void> _load() async {
+  periods = await ScheduleStore.loadPeriods();
+  teachers = await ScheduleStore.loadTeachers();
+  backups = await ScheduleStore.backups();
 
-    if (mounted) {
-      setState(() => loading = false);
-    }
+  // Uygulama açıldığında bildirimleri güncel programla yenile.
+  try {
+    await _scheduleNotificationsForCurrentData();
+  } catch (e) {
+    debugPrint('Bildirimler yenilenemedi: $e');
   }
+
+  if (mounted) {
+    setState(() => loading = false);
+  }
+}
+
 
   Future<void> _savePeriods() async {
     await ScheduleStore.savePeriods(periods);
