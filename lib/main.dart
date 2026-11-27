@@ -1215,14 +1215,18 @@ class _ProgramPageState extends State<ProgramPage> {
   }
 
   Future<void> _toggleLessonAlerts(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('lesson_alerts_enabled_v1', value);
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('lesson_alerts_enabled_v1', value);
 
-    if (!mounted) return;
-    setState(() => lessonAlertsEnabled = value);
+  if (!mounted) return;
+  setState(() => lessonAlertsEnabled = value);
 
-    await _refreshNotifications();
+  if (value) {
+    await NotificationService.instance.requestPermission();
   }
+
+  await _refreshNotifications();
+}
 
   Future<void> _togglePersistentNotification(bool value) async {
     final prefs = await SharedPreferences.getInstance();
