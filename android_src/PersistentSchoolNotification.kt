@@ -65,9 +65,7 @@ object SchoolDayAlarms {
         cancelAlarms(context)
 
         if (dailySchedule.length() == 0) {
-            context.stopService(
-                Intent(context, SchoolDayNotificationService::class.java)
-            )
+            stopNotificationService(context)
             return
         }
 
@@ -77,6 +75,9 @@ object SchoolDayAlarms {
                 scheduleNext(context, dayNumber, false)
             }
         }
+
+        // Uygulama gün ortasında açılmışsa bildirimi hemen başlat.
+        startIfSchoolDayIsActive(context)
     }
 
     fun cancel(context: Context) {
@@ -86,10 +87,92 @@ object SchoolDayAlarms {
             .apply()
 
         cancelAlarms(context)
+        stopNotificationService(context)
+    }
 
+    private fun stopNotificationService(context: Context) {
         context.stopService(
             Intent(context, SchoolDayNotificationService::class.java)
         )
+    }
+
+    private fun startNotificationService(context: Context) {
+        val service = Intent(
+            context,
+            SchoolDayNotificationService::class.java
+        )
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(service)
+            } else {
+                context.startService(service)
+            }
+        } catch (_: Exception) {
+            // Android servis başlatılmasına izin vermezse uygulama çalışmaya devam eder.
+        }
+    }
+
+    private fun parseMinutes(value: String): Int? {
+        val parts = value.split(":")
+        if (parts.size != 2) return null
+
+        val hour = parts[0].toIntOrNull() ?: return null
+        val minute = parts[1].toIntOrNull() ?: return null
+
+        if (hour !in 0..23 || minute !in 0..59) return null
+
+        return hour * 60 + minute
+    }
+
+    private fun startIfSchoolDayIsActive(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+        if (!prefs.getBoolean(ENABLED, false)) {
+            stopNotificationService(context)
+            return
+        }
+
+        val dailySchedule = try {
+            JSONObject(prefs.getString(DAILY_SCHEDULE_JSON, "{}") ?: "{}")
+        } catch (_: Exception) {
+            JSONObject()
+        }
+
+        val calendar = Calendar.getInstance()
+        val dayName = schoolDays[calendar.get(Calendar.DAY_OF_WEEK)]
+
+        if (dayName == null) {
+            stopNotificationService(context)
+            return
+        }
+
+        val daySchedule = dailySchedule.optJSONObject(dayName)
+
+        if (daySchedule == null) {
+            stopNotificationService(context)
+            return
+        }
+
+        val firstStart = parseMinutes(daySchedule.optString("firstStart"))
+        val lastEnd = parseMinutes(daySchedule.optString("lastEnd"))
+
+        if (firstStart == null || lastEnd == null) {
+            stopNotificationService(context)
+            return
+        }
+
+        val now = calendar.get(Calendar.HOUR_OF_DAY) * 60 +
+            calendar.get(Calendar.MINUTE)
+
+        val notificationStart = firstStart - 30
+        val notificationEnd = lastEnd + 10
+
+        if (now >= notificationStart && now < notificationEnd) {
+            startNotificationService(context)
+        } else {
+            stopNotificationService(context)
+        }
     }
 
     private fun cancelAlarms(context: Context) {
@@ -120,17 +203,13 @@ object SchoolDayAlarms {
             if (start) "firstStart" else "lastEnd"
         )
 
-        val parts = rawTime.split(":")
-        if (parts.size != 2) return
-
-        val hour = parts[0].toIntOrNull() ?: return
-        val minute = parts[1].toIntOrNull() ?: return
+        val baseMinutes = parseMinutes(rawTime) ?: return
 
         val calendar = Calendar.getInstance().apply {
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-            set(Calendar.HOUR_OF_DAY, hour)
-            set(Calendar.MINUTE, minute)
+            set(Calendar.HOUR_OF_DAY, baseMinutes / 60)
+            set(Calendar.MINUTE, baseMinutes % 60)
             add(Calendar.MINUTE, if (start) -30 else 10)
 
             while (
@@ -185,6 +264,7 @@ object SchoolDayAlarms {
 
     fun rescheduleAll(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
         if (!prefs.getBoolean(ENABLED, false)) return
 
         val dailySchedule = try {
@@ -199,6 +279,9 @@ object SchoolDayAlarms {
                 scheduleNext(context, dayNumber, false)
             }
         }
+
+        // Telefon yeniden başladığında da gün ortasındaysa bildirimi göster.
+        startIfSchoolDayIsActive(context)
     }
 }
 
@@ -214,10 +297,14 @@ class SchoolDayAlarmReceiver : BroadcastReceiver() {
                 SchoolDayNotificationService::class.java
             )
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(service)
-            } else {
-                context.startService(service)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(service)
+                } else {
+                    context.startService(service)
+                }
+            } catch (_: Exception) {
+                // Servis başlatılamazsa sonraki alarm yine kurulur.
             }
         } else {
             context.stopService(
@@ -249,11 +336,20 @@ class SchoolDayNotificationService : Service() {
 
     private val refresh = object : Runnable {
         override fun run() {
+            val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+            if (!prefs.getBoolean(ENABLED, false)) {
+                stopSelf()
+                return
+            }
+
             val manager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
             manager.notify(NOTIFICATION_ID, buildNotification())
-            handler.postDelayed(this, 60_000L)
+
+            // Bildirimi 15 saniyede bir güncelle.
+            handler.postDelayed(this, 15_000L)
         }
     }
 
@@ -261,7 +357,8 @@ class SchoolDayNotificationService : Service() {
         super.onCreate()
         createChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
-        handler.postDelayed(refresh, 60_000L)
+        handler.removeCallbacks(refresh)
+        handler.postDelayed(refresh, 15_000L)
     }
 
     override fun onStartCommand(
@@ -273,6 +370,7 @@ class SchoolDayNotificationService : Service() {
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         manager.notify(NOTIFICATION_ID, buildNotification())
+
         return START_STICKY
     }
 
@@ -464,8 +562,7 @@ class SchoolDayNotificationService : Service() {
                 Notification.Builder(this)
             }
 
-        val expanded =
-            "$detail\n$teacher\n$motivation"
+        val expanded = "$detail\n$teacher\n$motivation"
 
         return builder
             .setSmallIcon(R.drawable.ic_notification)
