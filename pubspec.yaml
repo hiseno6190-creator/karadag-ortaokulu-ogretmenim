@@ -4,19 +4,19 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.11.0 <4.0.0'
+  sdk: '>=3.4.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
   file_picker: ^10.3.3
-  excel_plus: ^2.29.3
+  excel: ^4.0.6
   path_provider: ^2.1.5
   shared_preferences: ^2.5.3
   open_filex: ^4.7.0
   share_plus: ^12.0.1
-  syncfusion_flutter_pdf: ^33.2.13+1
+  syncfusion_flutter_pdf: ^30.2.7
   intl: ^0.20.2
   flutter_local_notifications: ^19.5.0
   timezone: ^0.10.1
@@ -30,4 +30,3 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/karadag_ortaokulu_amblem(1).png
-    
