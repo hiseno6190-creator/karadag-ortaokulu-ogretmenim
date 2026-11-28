@@ -1020,12 +1020,6 @@ class _HomePageState extends State<HomePage> {
                 .toList();
             final period = found.isEmpty ? null : found.first;
 
-            
-            final found = widget.periods
-                .where((p) => p.number == lesson.period)
-                .toList();
-            final period = found.isEmpty ? null : found.first;
-
             final isToday = now.weekday >= 1 &&
                 now.weekday <= 5 &&
                 day == weekdays[now.weekday - 1];
