@@ -1,3 +1,4 @@
+
 name: karadag_ortaokulu
 description: Karadağ Ortaokulu çevrimdışı öğretmen ders programı uygulaması.
 publish_to: 'none'
@@ -12,6 +13,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   file_picker: ^10.3.3
   excel: ^4.0.6
+  archive: ^3.6.1
+  xml: ^6.5.0
   path_provider: ^2.1.5
   shared_preferences: ^2.5.3
   open_filex: ^4.7.0
@@ -30,3 +33,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/karadag_ortaokulu_amblem(1).png
+    
