@@ -1020,7 +1020,34 @@ class _HomePageState extends State<HomePage> {
                 .toList();
             final period = found.isEmpty ? null : found.first;
 
+            
+            final found = widget.periods
+                .where((p) => p.number == lesson.period)
+                .toList();
+            final period = found.isEmpty ? null : found.first;
+
+            final isToday = now.weekday >= 1 &&
+                now.weekday <= 5 &&
+                day == weekdays[now.weekday - 1];
+
+            Color? lessonCardColor;
+
+            if (isToday && period != null) {
+              final start = _mins(period.start);
+              final end = _mins(period.end);
+
+              if (currentMinutes >= end) {
+                lessonCardColor = Colors.green.shade100;
+              } else if (currentMinutes >= start &&
+                  currentMinutes < end) {
+                lessonCardColor = Colors.red.shade100;
+              } else {
+                lessonCardColor = Colors.blue.shade100;
+              }
+            }
+
             return Card(
+              color: lessonCardColor,
               child: ListTile(
                 leading: CircleAvatar(
                   backgroundColor: const Color(0xFFE3F0FF),
@@ -1045,6 +1072,7 @@ class _HomePageState extends State<HomePage> {
               ),
             );
           }),
+
         if (selected?.warning.isNotEmpty == true) ...[
           const SizedBox(height: 8),
           Card(
