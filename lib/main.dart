@@ -1024,7 +1024,7 @@ class _HomePageState extends State<HomePage> {
                 now.weekday <= 5 &&
                 day == weekdays[now.weekday - 1];
 
-            Color? lessonCardColor;
+            Color? lessonCardColor = Colors.blue.shade100;
 
             if (isToday && period != null) {
               final start = _mins(period.start);
@@ -1036,7 +1036,7 @@ class _HomePageState extends State<HomePage> {
                   currentMinutes < end) {
                 lessonCardColor = Colors.red.shade100;
               } else {
-                lessonCardColor = Colors.blue.shade100;
+                lessonCardColor = sc;
               }
             }
 
