@@ -1036,7 +1036,7 @@ class _HomePageState extends State<HomePage> {
                   currentMinutes < end) {
                 lessonCardColor = Colors.red.shade100;
               } else {
-                lessonCardColor = sc;
+                lessonCardColor = schoolGold;
               }
             }
 
