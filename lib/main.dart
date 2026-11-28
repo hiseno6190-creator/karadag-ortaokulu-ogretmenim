@@ -17,7 +17,8 @@ Future<void> main() async {
   await initializeDateFormatting('tr_TR');
   runApp(const KaradagApp());
 }
-const brand = Color(0xFF1565C0);
+const brand = Color(0xFF082D59);
+const schoolGold = Color(0xFFFFB900);
 const weekdays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'];
 
 class LessonPeriod {
@@ -616,10 +617,25 @@ Future<void> _load() async {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Karadağ Ortaokulu',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: Row(
+  children: [
+    ClipOval(
+      child: Image.asset(
+        'assets/images/karadag_ortaokulu_amblem(1).png',
+        width: 42,
+        height: 42,
+        fit: BoxFit.cover,
+      ),
+    ),
+    const SizedBox(width: 10),
+    const Expanded(
+      child: Text(
+        'Karadağ Ortaokulu',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+    ),
+  ],
+),
         backgroundColor: brand,
         foregroundColor: Colors.white,
       ),
